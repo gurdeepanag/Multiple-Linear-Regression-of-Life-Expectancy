@@ -1,0 +1,398 @@
+---
+title: "Regression Model: Average Global Life Expectancy Prediction"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r include=FALSE}
+library(binom)
+library(collapsibleTree)
+library(dbplyr)
+library(EnvStats)
+library(ggformula)
+library(ggplot2)
+library(ggpubr)
+library(htmltools)
+library(ISLR)
+library(knitr)
+library(lawstat)
+library(markdown)
+library(mosaic)
+library(mdsr)
+library(mosaicData)
+library(nycflights13)
+library(plyr)
+library(purrr)
+library(rmarkdown)
+library(stringi)
+library(tibble)
+library(tidyr)
+library(tidyselect)
+library(tinytex)
+library(yaml)
+library(dplyr)
+library(gridExtra)
+library(GGally)
+library(olsrr)
+library(mctest)
+library(lmtest)
+library(MASS)
+library(car)
+library(dgof)
+```
+Gurdeep Panag (30101520), Harjot Dhaliwal (30051859), Lukas Escoda (30211208), Shabbir Khandwala (30219011)
+
+University of Calgary
+
+DATA 603: Statistical Modelling with Data
+
+Instructor: Dr. Long
+
+December 7th, 2023
+
+# Introduction
+
+Our project centers around utilizing data on average life expectancy from the World Health Organization, spanning 179 countries between 2000 and 2015. Our objective is to construct a predictive regression model, considering various factors, to offer insights into enhancing a country's average life expectancy. The ultimate aim is to empower nations with proactive measures, enabling them to address critical factors and potentially avert national crises, ultimately fostering longer and healthier lives.
+
+Our progress intends to identify pivotal variables impacting average life expectancy, crafting models that enable leaders to make informed, data-driven decisions. Our goal is to develop a regression model with high prediction accuracy, emphasizing relevant variables and extending predictions to unseen data. Additionally, we aim to uncover insights on the variables most influencing a nation's life expectancy, proposing strategies for optimization.
+
+In terms of statistical methodology, we plan to leverage various visual plots (Ex. Residual Plots) to validate model assumptions and depict life expectancy trends globally. Through regression techniques, we aim to select an accurate prediction model, verify assumptions, and provide valuable insights for world leaders.
+
+This project holds personal significance for us, particularly those with roots in developing nations. We aspire to contribute to the improvement of living conditions in these regions, promoting longer and healthier lives to stimulate overall national growth. We firmly believe that enhancing living conditions globally will yield mutual benefits for people worldwide, fostering a stronger and more interconnected world.
+
+# Dataset
+
+The dataset, sourced from Kaggle (Lasha., 2023), comprises information from 179 countries spanning the years 2000-2015 and encompasses 21 features. Key variables such as Population, GDP, and Life Expectancy were inputted using World Bank data. Details on vaccinations, alcohol consumption, BMI, HIV incidents, mortality rates, and thinness were derived from World Health Organization datasets, while schooling information was obtained from Our World in Data, a project of the University of Oxford. The dataset introduces a variable classifying countries as Developed or Developing, adhering to definitions provided by the World Trade Organization and the United Nations.
+
+Key features include:
+
+1. **Country:** List of the 179 countries.
+2. **Region:** The distribution of 179 countries across 9 regions, including Africa, Asia, Oceania, European Union, Rest of Europe, etc.
+3. **Year:** Observed years ranging from 2000 to 2015.
+4. **Infant Deaths:** Represents infant deaths per 1000 population.
+5. **Under-Five Years Old Deaths:** Represents deaths of children under five years old per 1000 population.
+6. **Adult Mortality:** Represents deaths of adults per 1000 population.
+7. **Alcohol Consumption:** Represents recorded alcohol consumption in liters of pure alcohol per capita for individuals aged 15 and above.
+8. **Hepatitis B:** Represents the percentage of coverage of Hepatitis B (HepB3) immunization among 1-year-olds.
+9. **Measles:** Represents the percentage of coverage of Measles-containing vaccine first dose (MCV1) immunization among 1-year-olds.
+10. **BMI:** A measure of nutritional status in adults, calculated as a person's weight in kilograms divided by the square of their height in meters (kg/m2).
+11. **Polio:** Represents the percentage of coverage of Polio (Pol3) immunization among 1-year-olds.
+12. **Diphtheria:** Represents the percentage of coverage of Diphtheria tetanus toxoid and pertussis (DTP3) immunization among 1-year-olds.
+13. **Incidents_HIV:** Incidents of HIV per 1000 population aged 15-49.
+14. **GDP per Capita:** GDP per capita in current USD.
+15. **Population (Millions):** Total population in millions.
+16. **Thinness (10-19 Years):** Prevalence of thinness among adolescents aged 10-19 years (BMI < -2 standard deviations below the median).
+17. **Thinness (5-9 Years):** Prevalence of thinness among children aged 5-9 years (BMI < -2 standard deviations below the median).
+18. **Schooling:** Average years that people aged 25 and above spent in formal education.
+19. **Economy Status (Developed):** Developed country.
+20. **Economy Status (Developing):** Developing country.
+21. **Life Expectancy:** Average life expectancy of both genders in different years from 2010 to 2015.
+
+# Methodology
+
+We aim to streamline our model selection process by employing a systematic approach. Initially, we will utilize forward selection, followed by backward selection and stepwise methods to identify the most impactful variables. Subsequently, we will construct a new model incorporating consistently selected variables and conduct a best subset model selection. This strategy optimizes computational resources by eliminating insignificant variables first. To further refine our model, we will explore higher order and interaction terms. This approach ensures that we consider the best variables identified through various methods and assess if there are superior model subsets. Our goal is to strike a balance between computational efficiency and a thorough search for the best model, ensuring a robust selection process.
+
+The project unfolds in two main phases. First, we conduct an extensive model selection process, followed by the identification of interaction terms and higher order terms, and then confirming adherence to regression assumptions. The challenge lies in the subjective nature of model selection, requiring us to leverage collective knowledge. There is no definitive "wrong" answer in this step, emphasizing the need for a careful and informed decision-making process. In the event that assumptions are not met, we would utlize corrective actions such as variable deletion for multicollinearity, log transformation, or box-cox transformation.
+
+Our work is divided into two parts: Lukas and Shabbir will focus on selecting the best model, while Gurdeep and Harjot will enhance the model with higher order terms, interaction terms, and assess regression assumptions. Concluded with a joint effort to finalize the write up and report.
+
+# Results
+
+$\frac{life\_expectancy^{3.33}-1}{3.33} = -774459.69 + 122320.49x{schooling}\\ + 2257.98x_{polio} + 10.96x_{gdp/capita} + 36066.39x_{bmi} - 150716.01x_{incidents hiv} -\\ 0.00016x^2_{gdp/capita} + 0.0000000008x^3_{gdp/capita} +  4852.97x_{incidents hiv}*x_{bmi} - \\4396.57x_{schooling}*x_{bmi}$
+
+Our exhaustive regression model selection process unveiled crucial predictors significantly linked to life expectancy. Notably, variables such as schooling, Polio immunization coverage, GDP per Capita, BMI, and incidents of HIV emerged as influential factors. The model revealed that the average number of years of schooling is associated with increase in life expectancy, advocating for investments in education to foster longer lives. Similarly, higher Polio immunization coverage exhibited a positive correlation with life expectancy, suggesting fortified immunization programs for improved life spans. Surprisingly, the relationship between GDP per Capita and life expectancy showcased a cubic trend. Encouraging healthy BMI ranges and effective management of HIV incidents were also pivotal, showcasing positive correlations with longer life expectancy. This nuanced understanding challenges the traditional belief in continual economic growth as the sole driver of increased life spans. Our model's insights offer strategic guidance to nations, advocating for a holistic approach encompassing education, healthcare initiatives, balanced economic growth, and disease management to foster longer and healthier lives among populations.
+
+# Conclusion
+
+The approach undertaken for our project exhibits promise in uncovering influential factors impacting life expectancy across nations. By employing a systematic model selection process, we identified key predictors, including education, healthcare initiatives, economic indicators, and disease management, that significantly influence life expectancy. However, considering the complexity of socio-economic factors affecting longevity, augmenting our approach with a more expansive dataset, encompassing a wider array of socio-cultural aspects, could offer a more comprehensive understanding. Additionally, integrating advanced machine learning techniques, such as ensemble methods or deep learning architectures, might provide more nuanced insights into the intricate interplay of factors affecting life expectancy. While our current approach is robust, further exploration involving broader datasets and advanced methodologies could enhance the depth and accuracy of our predictions.
+
+In considering future endeavors, several avenues present themselves for further exploration and refinement. First and foremost, expanding our dataset to incorporate cultural, environmental, and policy-related variables could enrich our understanding of life expectancy determinants. Exploring regional or local-level data to capture nuances within countries could provide more targeted strategies for enhancing life expectancy at a more granular level. Moreover, validating our findings through longitudinal studies or by incorporating real-time data streams could offer dynamic insights into evolving factors influencing life expectancy. Additionally, collaborating with public health organizations or governmental bodies to implement and assess the impact of interventions based on our findings could provide tangible validations and foster the practical application of our research. Continual refinement of our predictive models, validation of assumptions, and addressing potential confounding variables are critical for establishing robust and reliable recommendations for policymakers and global health practitioners.
+
+# References
+
+Lasha., 2023. Life expectancy (WHO) fixed. Kaggle. https://www.kaggle.com/datasets/lashagoch/life-expectancy-who-updated
+
+# Appendix
+
+### Model Selection
+
+Let's begin by importing the dataset, focusing exclusively on the year 2015 (in order to preserve independence of the error terms). Furthermore, we would like to use the rest of the data to test against our final regression model.
+
+```{r}
+life.df = read.csv("Life-Expectancy-Data-Updated.csv")
+life = filter(life.df, Year == 2015)
+head(life, 4)
+```
+
+Now we can establish a maximum first order model. We intentionally excluded country, region, and year from our maximum first order model as we wanted to preserve independence of the error terms. Furthermore, we do not want factors that are outside of the control of stakeholders, to be included in our final model. In addition we removed all mortality-related variables as these variables are highly correlated with life-expectancy, therefore, overshadowing other variables, ultimately leading to their insignificance in a hypothetical final model. This kind of model would not allow us to derive any valuable insights for our original guiding question to provide people with as all of these are "death" related factors. Therefore, this is the appropriate maximum first order model we would start to work with.
+
+```{r}
+basemodel = lm(Life_expectancy ~ Alcohol_consumption + Hepatitis_B + Measles + BMI + Polio + Diphtheria + Incidents_HIV + GDP_per_capita + Population_mln + Thinness_ten_nineteen_years + Thinness_five_nine_years + Schooling + factor(Economy_status_Developed), data = life)
+
+summary(basemodel)
+```
+
+Now, we can perform a step-wise procedure, backward elimination procedure and forward selection procedure in order to see which variables to keep and remove.
+
+```{r}
+print("STEPWISE")
+summary(ols_step_both_p(basemodel, pent = 0.05, prem = 0.1, details = FALSE)$model)
+```
+
+```{r}
+print("FORWARD")
+summary(ols_step_forward_p(basemodel, pent = 0.05, details= FALSE)$model)
+```
+
+```{r}
+print("BACKWARD")
+summary(ols_step_backward_p(basemodel, prem = 0.05, details = FALSE)$model)
+```
+
+All of the selection procedures tell us to keep the same variables; schooling, incidents_hiv, polio, gdp_per_capita and bmi.
+
+Therefore, comparing our best reduced model against the base model using a partial F-test we see that:
+
+```{r}
+reducedmodel = ols_step_both_p(basemodel, pent = 0.05, prem = 0.1, details = FALSE)$model
+
+anova(basemodel, reducedmodel)
+```
+
+$H_0:$ No significant variables excluded from the mode.
+$H_A:$ At least one significant variable excluded from the model.
+
+From the partial F-test, we can see that the P value is greater than 0.05, meaning that the reduced model is not missing any significant variables when compared to the base model.
+
+Now we can perform all possible regression model selection on these 5 variables only, in order to preserve compute resources, and see if any smaller models are still viable at this stage.
+
+```{r}
+reducedmodel = lm(Life_expectancy ~ BMI + Polio + Incidents_HIV + GDP_per_capita + Schooling, data = life)
+
+all_possible_regression = ols_step_best_subset(reducedmodel, details = FALSE)
+all_possible_regression
+```
+
+We can see here that according to the smaller values for AIC and Cp as well as the larger adjusted r squared value, the best model to choose would be the one with all 5 of these variables, as these differences in the selection criteria are significant enough to justify the increase in model complexity.
+
+### Interaction Terms
+
+Now, we can go ahead and check for interaction terms:
+
+```{r}
+intmodel = lm(Life_expectancy ~ (BMI + Polio + Incidents_HIV + GDP_per_capita + Schooling) ^ 2, data = life)
+
+summary(intmodel)
+```
+
+It appears that there are only 4 significant interaction terms here, as the corresponding p-values are below our threshold of 0.05, therefore we can remove the insignificant ones.
+
+```{r}
+reducedintmodel = lm(Life_expectancy ~ BMI + Polio + Incidents_HIV + GDP_per_capita + Schooling + BMI:Incidents_HIV + BMI:Schooling + Polio:GDP_per_capita + GDP_per_capita:Schooling, data = life)
+
+summary(reducedintmodel)
+```
+
+This is now our best reduced interaction model, now we can perform the partial F-test based on the full interaction model vs. the reduced interaction model in order to confirm if we only removed insignificant terms:
+
+```{r}
+anova(intmodel, reducedintmodel)
+```
+
+$H_0: $ No significant variables excluded from the model.
+$H_A: $ At least one significant variable excluded from the model.
+
+From the partial F-test, we can see that there is no significant interaction terms left out of our new model, since the p-value is greater than 0.05.
+
+### Higher Order Terms
+
+Now, we can check for any higher-order terms:
+
+```{r}
+ggpairs(life[, c("Life_expectancy", "BMI", "Polio", "Incidents_HIV", "GDP_per_capita", "Schooling")])
+```
+
+From these graphs, we can see that there may be a non-linear relationship with gdp_per_capita due to the curved nature of the scatter plot. We can add a higher order term for this variable to our model:
+
+```{r}
+reducedpwrintmodel = lm(Life_expectancy ~ Schooling + Polio + GDP_per_capita + BMI + Incidents_HIV + GDP_per_capita + I(GDP_per_capita^2) + BMI*Incidents_HIV + BMI*Schooling + Polio*GDP_per_capita + GDP_per_capita*Schooling, data = life)
+
+summary(reducedpwrintmodel)
+```
+
+Now, we can check the cubic term.
+
+```{r}
+reducedpwrintmodel = lm(Life_expectancy ~ Schooling + Polio + GDP_per_capita + BMI + Incidents_HIV + GDP_per_capita + I(GDP_per_capita^2) + I(GDP_per_capita^3) + BMI*Incidents_HIV + BMI*Schooling + Polio*GDP_per_capita + GDP_per_capita*Schooling, data = life)
+
+summary(reducedpwrintmodel)
+```
+
+Now we can check the fourth term:
+
+```{r}
+reducedpwrintmodel = lm(Life_expectancy ~ Schooling + Polio + GDP_per_capita + BMI + Incidents_HIV + GDP_per_capita + I(GDP_per_capita^2) + I(GDP_per_capita^3) + I(GDP_per_capita^4) + BMI*Incidents_HIV + BMI*Schooling + Polio*GDP_per_capita + GDP_per_capita*Schooling, data = life)
+
+summary(reducedpwrintmodel)
+```
+
+We can see that the fourth power term is insignificant, therefore we stick with the cubic model.
+
+```{r}
+reducedpwrintmodel = lm(Life_expectancy ~ Schooling + Polio + GDP_per_capita + BMI + Incidents_HIV + GDP_per_capita + I(GDP_per_capita^2) + I(GDP_per_capita^3) + BMI*Incidents_HIV + BMI*Schooling + Polio*GDP_per_capita + GDP_per_capita*Schooling, data = life)
+
+summary(reducedpwrintmodel)
+```
+
+We can see now that the interaction terms Polio:GDP_per_capita and Schooling:GDP_per_capita are insignificant, therefore we can remove them.
+
+```{r}
+reducedpwrintmodel = lm(Life_expectancy ~ Schooling + Polio + GDP_per_capita + I(GDP_per_capita^2) + I(GDP_per_capita^3) + BMI + Incidents_HIV + BMI*Incidents_HIV + BMI*Schooling, data = life)
+
+summary(reducedpwrintmodel)
+```
+
+We can conclude now, that this is our best final model that we can test the assumptions for.
+
+### Assumption Testing
+
+Normality of the Residuals:
+
+```{r}
+hist(residuals(reducedpwrintmodel), main = "Residual Histogram", xlab = "Residuals")
+```
+
+```{r}
+plot(reducedpwrintmodel, which = 2)
+```
+
+```{r}
+shapiro.test(residuals(reducedpwrintmodel))
+```
+
+$H_0: $ Residuals are normally distributed.
+$H_A: $ Residuals are not normally distributed.
+
+As we can see, the Shapiro-Wilk fails as there is a p-value less than 0.05, therefore rejecting the null hypothesis and saying that our condition of normality of the residuals does not hold. In this case, we can go ahead and try to do a box-cox transformation to check if this helps meet this assumption:
+
+Box-Cox Transformation:
+
+```{r}
+bc = boxcox(reducedpwrintmodel, lambda = seq(-10, 10), data = life)
+```
+
+```{r}
+best.lambda = bc$x[which(bc$y == max(bc$y))]
+best.lambda
+```
+
+```{r}
+boxcoxmodel = lm((Life_expectancy^best.lambda - 1)/best.lambda ~ Schooling + Polio + GDP_per_capita + I(GDP_per_capita^2) + I(GDP_per_capita^3) + BMI + Incidents_HIV + BMI*Incidents_HIV + BMI*Schooling, data = life)
+
+summary(boxcoxmodel)
+```
+
+It appears that this box-cox still maintains all variables as being significant. Now lets test the normality assumption again:
+
+Normality of the Residuals:
+
+```{r}
+hist(residuals(boxcoxmodel), main = "Residual Histogram", xlab = "Residuals")
+```
+
+```{r}
+plot(boxcoxmodel, which = 2)
+```
+
+```{r}
+shapiro.test(residuals(boxcoxmodel))
+```
+
+$H_0: $ Residuals are normally distributed.
+$H_A: $ Residuals are not normally distributed.
+
+According the Shapiro-Wilk the p-value is above 0.05, therefore we fail to reject the null hypothesis and can go ahead and conclude that the residuals are normally distributed. This is also backed up by our Q-Q normality plot and histogram.
+
+Linearity:
+
+```{r}
+plot(boxcoxmodel, which = 1)
+```
+
+There appears to be no evident pattern, therefore it appears that the linearity assumption is met according the residual plot above.
+
+Independence:
+
+```{r}
+ggplot(data = data.frame(Residuals = residuals(boxcoxmodel), Region = life$Region), mapping = aes(x = Residuals, col = "black", fill = Region)) + 
+  geom_boxplot(col = "black") + ggtitle("Residual Distribution by Geography")
+```
+
+Independence is assumed by default, however in order to mitigate any dependencies, we ensured to filter for the year 2015 only in this training dataset. In addition, we also checked for clumping of residuals by geography in our boxplot above, All of these boxplots for each region overlap with eachother, showing there is no clumping going on by region.
+
+Equal Variance:
+
+```{r}
+plot(boxcoxmodel, which = 1)
+```
+
+```{r}
+plot(boxcoxmodel, which = 3)
+```
+
+```{r}
+bptest(boxcoxmodel)
+```
+
+$H_0: $ Homoscedacity holds.
+$H_A: $ Heteroscedacity holds.
+
+It appears due to our Breusch-Pagan test, that the condition of equal variances holds, as the p-value is greater than 0.05. This is further confirmed by our residual plot and scale-location plots as it appears that the points are distributed equality above and below the line for all fitted values.
+
+Multicollinearity:
+
+We can check for multicollinearity in our current model, however it contains interaction/higher order terms, thus there will be high VIF values for it. However we can ignore this as we know this is due to those terms, and we can test the base model terms for any multicollinearity.
+
+```{r}
+imcdiag(boxcoxmodel, method = "VIF")
+```
+
+We can also check for multicollinearity between the base terms, as our VIF test above included interaction, affected the VIF test negatively:
+
+```{r}
+imcdiag(reducedmodel, method = "VIF")
+```
+
+It appears that we can say that the model meets the multicollinearity assumption as, it appears there is no multicollinearity present between the base variables.
+
+Outliers:
+
+```{r}
+plot(boxcoxmodel, which = 5)
+```
+
+```{r}
+plot(boxcoxmodel, pch = 18, col = "red", which = c(4))
+```
+
+It appears, according to the cooks distance and residuals vs. leverage plot, there are no outliers, as all cooks distances are below 0.5.
+
+Now, just to test how well our regression model does against new data, we can plot our predicted values against the actual values for the last 3 years of data, and it should follow the diagonal line if it is indeed an accurate model.
+
+```{r}
+life.df$predicted_life_expectancy = predict(boxcoxmodel, newdata = life.df)
+
+ggplot(life.df %>%
+  filter(Year %in% c(2014, 2013, 2012)), aes(x = Life_expectancy, y = ((predicted_life_expectancy*best.lambda) + 1)^(1/best.lambda))) +
+  geom_point(aes(color = as.factor(Year)), alpha = 0.5) +
+  scale_color_discrete(name = "Year") +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") + 
+  labs(x = "Actual Life Expectancy", y = "Predicted Life Expectancy",
+       title = "Actual vs. Predicted Life Expectancy Across 2012, 2013, and 2014") +
+  theme_minimal() +
+  theme(legend.position = "bottom") 
+```
+
+As we can see, all of these points are very tightly clustered around the diagonal line, signifying an accurate and precise prediction. It also appears that the model is better when predicting for countries with a higher life expectancy, as those points seem to be more tightly clustered around the diagonal line, as opposed to ones with a lower life expectancy. This may be due to the fact that there may be more factors involved when considering regions with a lower life expectancy, than the ones included in our dataset.
